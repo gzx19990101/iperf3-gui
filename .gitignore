@@ -1,0 +1,15 @@
+build/bin/
+node_modules/
+.tmp/
+.playwright-mcp/
+*.log
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
+*.suo
+*.user
+*.db
+*.db-shm
+*.db-wal
+.commandcode/

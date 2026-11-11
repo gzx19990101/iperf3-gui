@@ -1,0 +1,1038 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f5f7">
+  <link rel="icon" href="data:,">
+  <title>iPerf3 网络测试台</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #f3f5f7;
+      --surface: #ffffff;
+      --surface-subtle: #f8fafb;
+      --ink: #202a32;
+      --muted: #687680;
+      --faint: #929da5;
+      --line: #e1e7eb;
+      --line-strong: #cbd4da;
+      --blue: #1769e0;
+      --blue-soft: #eaf2ff;
+      --green: #17836d;
+      --green-soft: #e8f5f0;
+      --orange: #c87527;
+      --orange-soft: #fff3e5;
+      --red: #bd4747;
+      --red-soft: #fff0ef;
+      --shadow: 0 1px 2px rgba(28, 43, 54, .04), 0 8px 24px rgba(28, 43, 54, .035);
+      font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: var(--canvas); color: var(--ink); }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+      outline: 3px solid rgba(23, 105, 224, .25);
+      outline-offset: 2px;
+    }
+    [hidden] { display: none !important; }
+
+    .topbar {
+      height: 66px;
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      padding: 0 28px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; min-width: 238px; }
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: #e9f1ff;
+      color: var(--blue);
+    }
+    .brand-mark svg { width: 20px; height: 20px; }
+    .brand-name { font-size: 15px; font-weight: 700; line-height: 1.1; }
+    .brand-subtitle { margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .nav-tabs { display: flex; align-self: stretch; align-items: stretch; gap: 24px; }
+    .nav-tab {
+      position: relative;
+      min-width: 78px;
+      padding: 0 3px;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .nav-tab:hover { color: var(--ink); }
+    .nav-tab[aria-selected="true"] { color: var(--blue); font-weight: 650; }
+    .nav-tab[aria-selected="true"]::after {
+      position: absolute;
+      right: 0;
+      bottom: -1px;
+      left: 0;
+      height: 2px;
+      background: var(--blue);
+      content: "";
+    }
+    .topbar-right { display: flex; align-items: center; gap: 18px; margin-left: auto; }
+    .engine-status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+    .status-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--green); }
+    .status-dot.is-running { background: var(--orange); box-shadow: 0 0 0 3px var(--orange-soft); }
+    .demo-label { padding: 5px 8px; border: 1px solid #f0dfc9; border-radius: 5px; background: #fff8ef; color: #94602b; font-size: 11px; }
+
+    main { width: min(1520px, 100%); margin: 0 auto; padding: 26px 28px 34px; }
+    .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 1px 0 19px; }
+    h1 { margin: 0; font-size: 21px; line-height: 1.25; font-weight: 680; }
+    .page-subtitle { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+    .page-actions { display: flex; align-items: center; gap: 9px; }
+    .layout { display: grid; grid-template-columns: minmax(318px, 360px) minmax(0, 1fr); align-items: start; gap: 16px; }
+    .panel { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+    .panel-title { margin: 0; font-size: 14px; font-weight: 650; }
+    .panel-kicker { margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .panel-body { padding: 17px 18px 18px; }
+    .field { min-width: 0; margin-bottom: 14px; }
+    .field-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 11px; }
+    .field label, .field-label { display: block; margin-bottom: 6px; color: #43515a; font-size: 11px; font-weight: 600; }
+    .input-wrap { position: relative; }
+    .input, .select {
+      width: 100%;
+      height: 38px;
+      padding: 0 10px;
+      border: 1px solid var(--line-strong);
+      border-radius: 5px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 12px;
+    }
+    .input:hover, .select:hover { border-color: #aebac2; }
+    .input:disabled, .select:disabled { background: #f6f8f9; color: #7d8990; }
+    .unit-field { display: flex; height: 38px; border: 1px solid var(--line-strong); border-radius: 5px; overflow: hidden; }
+    .unit-field:focus-within { outline: 3px solid rgba(23, 105, 224, .16); border-color: var(--blue); }
+    .unit-field input { min-width: 0; width: 100%; border: 0; padding: 0 10px; outline: 0; color: var(--ink); font-size: 12px; }
+    .unit-field select { width: 82px; border: 0; border-left: 1px solid var(--line); padding: 0 6px; background: var(--surface-subtle); color: var(--muted); font-size: 11px; }
+    .segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 6px; background: #f3f6f8; }
+    .segment-button { height: 31px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
+    .segment-button[aria-pressed="true"] { background: #fff; color: var(--blue); font-weight: 650; box-shadow: 0 1px 3px rgba(22, 41, 54, .12); }
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 38px; margin: 1px 0 12px; }
+    .switch-copy { color: #43515a; font-size: 12px; }
+    .switch-copy small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .switch { position: relative; width: 36px; height: 21px; padding: 0; border: 0; border-radius: 11px; background: #c6d0d6; cursor: pointer; transition: background .18s ease; }
+    .switch::after { position: absolute; top: 3px; left: 3px; width: 15px; height: 15px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #0002; content: ""; transition: transform .18s ease; }
+    .switch[aria-checked="true"] { background: var(--blue); }
+    .switch[aria-checked="true"]::after { transform: translateX(15px); }
+    .advanced { margin: 12px 0 15px; border-top: 1px solid var(--line); }
+    .advanced summary { padding: 13px 0 8px; color: #43515a; font-size: 11px; font-weight: 600; cursor: pointer; }
+    .advanced-content { padding-top: 7px; }
+    .field-error { min-height: 17px; margin: -3px 0 7px; color: var(--red); font-size: 11px; }
+    .primary-button, .secondary-button, .quiet-button, .danger-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid transparent;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .16s ease, border-color .16s ease, color .16s ease;
+    }
+    .primary-button { min-height: 42px; width: 100%; background: var(--blue); color: #fff; }
+    .primary-button:hover { background: #0f58c4; }
+    .primary-button:disabled { background: #9ab8e7; cursor: not-allowed; }
+    .secondary-button { border-color: var(--line-strong); background: #fff; color: #3b4952; }
+    .secondary-button:hover, .quiet-button:hover { border-color: #b4c1c9; background: #f7f9fa; }
+    .quiet-button { border-color: transparent; background: transparent; color: var(--muted); }
+    .danger-button { border-color: #efc9c6; background: var(--red-soft); color: var(--red); }
+    .danger-button:hover { background: #ffe7e5; }
+    .command-line { margin-top: 13px; padding: 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-subtle); }
+    .command-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; color: var(--muted); font-size: 10px; }
+    .command { display: block; overflow-wrap: anywhere; color: #45535b; font: 10px/1.55 "Cascadia Code", Consolas, monospace; }
+    .command-copy { padding: 3px 0; border: 0; background: transparent; color: var(--blue); font-size: 10px; cursor: pointer; }
+    .command-copy:hover { text-decoration: underline; }
+
+    .results-column { display: grid; gap: 14px; min-width: 0; }
+    .result-summary { display: flex; align-items: center; gap: 9px; }
+    .state-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 4px; background: var(--green-soft); color: var(--green); font-size: 10px; font-weight: 650; }
+    .state-pill.is-running { background: var(--orange-soft); color: var(--orange); }
+    .state-pill.is-error { background: var(--red-soft); color: var(--red); }
+    .state-pill .status-dot { width: 6px; height: 6px; }
+    .result-time { color: var(--muted); font-size: 10px; }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
+    .metric { min-width: 0; padding: 16px 18px 15px; border-right: 1px solid var(--line); }
+    .metric:last-child { border-right: 0; }
+    .metric-label { color: var(--muted); font-size: 10px; }
+    .metric-value { display: flex; align-items: baseline; gap: 5px; overflow: hidden; margin-top: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .metric-value strong { overflow: hidden; font-size: 20px; font-weight: 680; text-overflow: ellipsis; }
+    .metric-value span { color: var(--muted); font-size: 10px; }
+    .metric-foot { margin-top: 5px; color: var(--faint); font-size: 10px; }
+    .metric-accent-blue { color: var(--blue); }
+    .metric-accent-orange { color: var(--orange); }
+    .metric-accent-green { color: var(--green); }
+    .chart-section { padding: 15px 18px 9px; }
+    .section-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .section-title { margin: 0; font-size: 12px; font-weight: 650; }
+    .chart-legend { display: flex; align-items: center; gap: 15px; color: var(--muted); font-size: 10px; }
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+    .legend-line { width: 14px; height: 2px; border-radius: 2px; background: var(--blue); }
+    .legend-line.sender { background: #dc7948; }
+    .chart-wrap { position: relative; height: 246px; margin-top: 12px; }
+    .chart-wrap svg { width: 100%; height: 100%; overflow: visible; }
+    .chart-gridline { stroke: #edf0f2; stroke-width: 1; }
+    .chart-label { fill: #7d8991; font: 10px Inter, "Microsoft YaHei", sans-serif; }
+    .chart-receiver { fill: none; stroke: var(--blue); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5; }
+    .chart-sender { fill: none; stroke: #dc7948; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; stroke-dasharray: 5 4; }
+    .chart-area { fill: url(#receiverFill); }
+    .chart-point { fill: #fff; stroke: var(--blue); stroke-width: 2; }
+    .chart-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 12px; pointer-events: none; }
+    .progress-track { height: 3px; margin: 0 18px 13px; overflow: hidden; border-radius: 2px; background: #eef1f3; }
+    .progress-fill { width: 0; height: 100%; background: var(--blue); transition: width .3s ease; }
+    .table-section { border-top: 1px solid var(--line); }
+    .table-section .section-title-row { padding: 14px 18px 10px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { padding: 8px 18px; background: #f8fafb; color: var(--muted); font-size: 10px; font-weight: 550; white-space: nowrap; }
+    td { padding: 9px 18px; border-top: 1px solid #edf0f2; color: #43515a; font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    td.numeric, th.numeric { text-align: right; }
+    .raw-output { border-top: 1px solid var(--line); }
+    .raw-output summary { padding: 12px 18px; color: #43515a; font-size: 11px; font-weight: 600; cursor: pointer; }
+    .raw-output pre { overflow: auto; max-height: 180px; margin: 0; padding: 0 18px 16px; color: #59656d; font: 10px/1.6 "Cascadia Code", Consolas, monospace; white-space: pre-wrap; }
+
+    .server-layout { display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); align-items: start; gap: 16px; }
+    .server-empty { min-height: 160px; display: grid; place-items: center; padding: 24px; color: var(--muted); text-align: center; font-size: 12px; }
+    .server-state { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px 18px; border-bottom: 1px solid var(--line); }
+    .server-state strong { display: block; font-size: 14px; }
+    .server-state span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .log-list { margin: 0; padding: 0; list-style: none; }
+    .log-list li { display: grid; grid-template-columns: 62px 1fr; gap: 10px; padding: 10px 18px; border-top: 1px solid #edf0f2; color: #53616a; font-size: 11px; }
+    .log-list time { color: var(--faint); font-variant-numeric: tabular-nums; }
+    .history-toolbar { display: flex; align-items: center; gap: 9px; }
+    .search-input { width: 220px; }
+    .history-table { min-width: 760px; }
+    .history-table tbody tr { cursor: pointer; }
+    .history-table tbody tr:hover { background: #f7faff; }
+    .protocol-badge { display: inline-block; min-width: 38px; padding: 3px 6px; border-radius: 4px; background: #eef2f4; color: #53616a; text-align: center; font-size: 9px; font-weight: 650; }
+    .protocol-badge.udp { background: #fff1e7; color: #a85c20; }
+    .toast { position: fixed; right: 22px; bottom: 22px; z-index: 5; max-width: min(360px, calc(100vw - 32px)); padding: 11px 14px; border: 1px solid var(--line-strong); border-radius: 6px; background: #fff; box-shadow: 0 6px 24px #1d29331f; color: var(--ink); font-size: 12px; opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .18s ease, transform .18s ease; }
+    .toast.is-visible { opacity: 1; transform: translateY(0); }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+
+    @media (max-width: 1050px) {
+      .topbar { gap: 18px; padding: 0 20px; }
+      .brand { min-width: 205px; }
+      main { padding: 22px 20px 30px; }
+      .layout, .server-layout { grid-template-columns: minmax(290px, 330px) minmax(0, 1fr); gap: 12px; }
+      .metric { padding-right: 12px; padding-left: 12px; }
+      .metric-value strong { font-size: 18px; }
+    }
+    @media (max-width: 760px) {
+      .topbar { height: auto; min-height: 62px; flex-wrap: wrap; gap: 0 14px; padding: 10px 16px 0; }
+      .brand { min-width: auto; margin-right: auto; padding-bottom: 9px; }
+      .brand-subtitle { display: none; }
+      .topbar-right { gap: 9px; margin-left: 0; padding-bottom: 9px; }
+      .engine-status { font-size: 10px; }
+      .engine-version { display: none; }
+      .nav-tabs { order: 3; width: 100%; height: 42px; gap: 22px; }
+      .nav-tab { min-width: 66px; font-size: 12px; }
+      main { padding: 19px 14px 26px; }
+      .page-heading { align-items: flex-start; flex-direction: column; margin-bottom: 14px; }
+      .layout, .server-layout { grid-template-columns: minmax(0, 1fr); }
+      .config-column { grid-row: 1; }
+      .results-column { grid-row: 2; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric:nth-child(2) { border-right: 0; }
+      .metric:nth-child(n+3) { border-top: 1px solid var(--line); }
+      .chart-wrap { height: 205px; }
+      .history-toolbar { width: 100%; flex-wrap: wrap; }
+      .search-input { flex: 1; width: auto; }
+    }
+    @media (max-width: 420px) {
+      .demo-label { font-size: 10px; }
+      .engine-status { gap: 6px; }
+      .nav-tabs { gap: 12px; }
+      .nav-tab { min-width: 60px; }
+      .panel-head { padding: 14px; }
+      .panel-body { padding: 15px 14px; }
+      .chart-section { padding-right: 12px; padding-left: 12px; }
+      .table-section .section-title-row { padding-right: 14px; padding-left: 14px; }
+      th, td { padding-right: 12px; padding-left: 12px; }
+      .chart-legend { gap: 9px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" aria-label="iPerf3 网络测试台">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19V5M4 19h16" />
+          <path d="m7 15 3-4 3 2 5-7" />
+          <path d="M16 6h2v2" />
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">iPerf3 网络测试台</div>
+        <div class="brand-subtitle">网络吞吐测试</div>
+      </div>
+    </div>
+    <nav class="nav-tabs" role="tablist" aria-label="工作区">
+      <button class="nav-tab" type="button" role="tab" aria-selected="true" data-view="client">客户端</button>
+      <button class="nav-tab" type="button" role="tab" aria-selected="false" data-view="server">服务端</button>
+      <button class="nav-tab" type="button" role="tab" aria-selected="false" data-view="history">历史记录</button>
+    </nav>
+    <div class="topbar-right">
+      <div class="engine-status"><span class="status-dot" id="engineDot"></span><span id="engineState">引擎就绪</span><span class="engine-version">· v3.17.1</span></div>
+      <span class="demo-label">演示模式</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="view" id="view-client" data-view-id="client" role="tabpanel">
+      <div class="page-heading">
+        <div>
+          <h1>客户端测试</h1>
+          <p class="page-subtitle">配置目标与测试参数，查看实时吞吐和传输结果</p>
+        </div>
+        <div class="page-actions">
+          <button class="secondary-button" id="exportResult" type="button">导出 JSON</button>
+        </div>
+      </div>
+
+      <div class="layout">
+        <section class="panel config-column" aria-labelledby="configHeading">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title" id="configHeading">测试配置</h2>
+              <div class="panel-kicker">客户端 → 远端服务端</div>
+            </div>
+            <span class="protocol-badge" id="configProtocolBadge">TCP</span>
+          </div>
+          <div class="panel-body">
+            <div class="field">
+              <label for="host">目标地址</label>
+              <input class="input" id="host" name="host" type="text" value="192.168.1.20" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="port">端口</label>
+                <input class="input" id="port" name="port" type="number" min="1" max="65535" value="5201">
+              </div>
+              <div class="field">
+                <label for="interface">本地接口</label>
+                <select class="select" id="interface" name="interface">
+                  <option value="auto">自动选择</option>
+                  <option value="192.168.1.12">Ethernet · 192.168.1.12</option>
+                  <option value="10.0.0.8">Wi-Fi · 10.0.0.8</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <span class="field-label">协议</span>
+              <div class="segmented" role="group" aria-label="传输协议">
+                <button class="segment-button" type="button" data-protocol="tcp" aria-pressed="true">TCP</button>
+                <button class="segment-button" type="button" data-protocol="udp" aria-pressed="false">UDP</button>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="duration">时长</label>
+                <div class="unit-field"><input id="duration" type="number" min="1" max="3600" value="10"><select aria-label="时长单位" disabled><option>秒</option></select></div>
+              </div>
+              <div class="field">
+                <label for="interval">报告间隔</label>
+                <div class="unit-field"><input id="interval" type="number" min="1" max="3600" value="1"><select aria-label="报告间隔单位" disabled><option>秒</option></select></div>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="parallel">并行流</label>
+                <div class="unit-field"><input id="parallel" type="number" min="1" max="128" value="1"><select aria-label="并行流单位" disabled><option>条</option></select></div>
+              </div>
+              <div class="field" id="bandwidthField" hidden>
+                <label for="bandwidth">目标带宽</label>
+                <div class="unit-field"><input id="bandwidth" type="number" min="1" value="100"><select id="bandwidthUnit" aria-label="带宽单位"><option value="M">Mbit/s</option><option value="G">Gbit/s</option><option value="K">Kbit/s</option></select></div>
+              </div>
+            </div>
+
+            <div class="switch-row">
+              <div class="switch-copy">反向测试 <small>由服务端向客户端发送</small></div>
+              <button class="switch" id="reverseSwitch" type="button" role="switch" aria-checked="false" aria-label="反向测试"></button>
+            </div>
+
+            <details class="advanced">
+              <summary>高级参数</summary>
+              <div class="advanced-content">
+                <div class="field-row">
+                  <div class="field">
+                    <label for="bindAddress">绑定地址</label>
+                    <input class="input" id="bindAddress" type="text" placeholder="可选">
+                  </div>
+                  <div class="field">
+                    <label for="ipVersion">IP 版本</label>
+                    <select class="select" id="ipVersion"><option value="">自动</option><option value="4">IPv4</option><option value="6">IPv6</option></select>
+                  </div>
+                </div>
+                <div class="field" id="udpLengthField" hidden>
+                  <label for="udpLength">UDP 数据报长度</label>
+                  <div class="unit-field"><input id="udpLength" type="number" min="1" max="65507" value="1200"><select aria-label="数据报长度单位" disabled><option>字节</option></select></div>
+                </div>
+              </div>
+            </details>
+
+            <div class="field-error" id="formError" role="alert" aria-live="polite"></div>
+            <button class="primary-button" id="startTest" type="button">开始测试</button>
+            <button class="danger-button primary-button" id="stopTest" type="button" hidden>停止测试</button>
+            <div class="command-line">
+              <div class="command-head"><span>命令预览</span><button class="command-copy" id="copyCommand" type="button">复制命令</button></div>
+              <code class="command" id="commandPreview">iperf3 -c 192.168.1.20 -p 5201 -t 10 -i 1 -P 1</code>
+            </div>
+          </div>
+        </section>
+
+        <div class="results-column">
+          <section class="panel" aria-labelledby="resultHeading">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title" id="resultHeading">测试结果</h2>
+                <div class="panel-kicker" id="resultTarget">192.168.1.20:5201 · TCP · 接收端</div>
+              </div>
+              <div class="result-summary">
+                <span class="state-pill" id="resultState"><span class="status-dot"></span><span>演示样例</span></span>
+                <span class="result-time" id="resultTime">最近一次 · 14:32:08</span>
+              </div>
+            </div>
+            <div class="metrics" id="metrics"></div>
+            <div class="chart-section">
+              <div class="section-title-row">
+                <h3 class="section-title">带宽趋势</h3>
+                <div class="chart-legend" aria-label="图例">
+                  <span class="legend-item"><span class="legend-line"></span><span>接收端</span></span>
+                  <span class="legend-item"><span class="legend-line sender"></span><span>发送端</span></span>
+                </div>
+              </div>
+              <div class="chart-wrap">
+                <svg id="throughputChart" viewBox="0 0 900 250" role="img" aria-label="每秒吞吐趋势图" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="receiverFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1769e0" stop-opacity=".14"/><stop offset="1" stop-color="#1769e0" stop-opacity="0"/></linearGradient>
+                  </defs>
+                  <g id="chartGrid"></g>
+                  <g id="chartYAxisLabels"></g>
+                  <path class="chart-area" id="chartArea"></path>
+                  <path class="chart-sender" id="senderPath"></path>
+                  <path class="chart-receiver" id="receiverPath"></path>
+                  <g id="chartPoints"></g>
+                  <g id="chartLabels"></g>
+                </svg>
+                <div class="chart-empty" id="chartEmpty" hidden>等待测试数据</div>
+              </div>
+            </div>
+            <div class="progress-track" id="progressTrack" hidden><div class="progress-fill" id="progressFill"></div></div>
+            <div class="table-section">
+              <div class="section-title-row">
+                <h3 class="section-title">区间明细</h3>
+                <span class="panel-kicker" id="intervalNote">1 秒间隔</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr id="detailHead"></tr></thead>
+                  <tbody id="detailRows"></tbody>
+                </table>
+              </div>
+            </div>
+            <details class="raw-output">
+              <summary>iPerf3 原始输出</summary>
+              <pre id="rawOutput"></pre>
+            </details>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-server" data-view-id="server" role="tabpanel" hidden>
+      <div class="page-heading">
+        <div><h1>服务端</h1><p class="page-subtitle">管理本机 iPerf3 监听进程与连接状态</p></div>
+      </div>
+      <div class="server-layout">
+        <section class="panel" aria-labelledby="serverConfigHeading">
+          <div class="panel-head"><div><h2 class="panel-title" id="serverConfigHeading">监听配置</h2><div class="panel-kicker">等待客户端连接</div></div><span class="protocol-badge">SERVER</span></div>
+          <div class="panel-body">
+            <div class="field-row">
+              <div class="field"><label for="serverPort">监听端口</label><input class="input" id="serverPort" type="number" min="1" max="65535" value="5201"></div>
+              <div class="field"><label for="serverBind">绑定地址</label><select class="select" id="serverBind"><option value="0.0.0.0">所有接口</option><option value="192.168.1.12">Ethernet · 192.168.1.12</option><option value="10.0.0.8">Wi-Fi · 10.0.0.8</option></select></div>
+            </div>
+            <div class="switch-row"><div class="switch-copy">单次连接 <small>完成一次测试后自动停止</small></div><button class="switch" id="oneOffSwitch" type="button" role="switch" aria-checked="false" aria-label="单次连接"></button></div>
+            <div class="field-error" id="serverError" role="alert" aria-live="polite"></div>
+            <button class="primary-button" id="startServer" type="button">启动服务端</button>
+            <button class="danger-button primary-button" id="stopServer" type="button" hidden>停止服务端</button>
+            <div class="command-line"><div class="command-head"><span>命令预览</span><button class="command-copy" id="copyServerCommand" type="button">复制命令</button></div><code class="command" id="serverCommand">iperf3 -s -p 5201</code></div>
+          </div>
+        </section>
+        <section class="panel" aria-labelledby="serverMonitorHeading">
+          <div class="panel-head"><div><h2 class="panel-title" id="serverMonitorHeading">服务端状态</h2><div class="panel-kicker">本地监听与客户端连接</div></div><span class="demo-label">演示模式</span></div>
+          <div class="server-state"><div><strong id="serverStateTitle">未监听</strong><span id="serverStateDetail">端口 5201 · 0.0.0.0</span></div><span class="state-pill" id="serverStatePill"><span class="status-dot"></span><span>已停止</span></span></div>
+          <div class="table-section"><div class="section-title-row"><h3 class="section-title">连接记录</h3><span class="panel-kicker" id="connectionCount">0 个连接</span></div>
+            <div class="table-wrap"><table><thead><tr><th>客户端</th><th>协议</th><th>开始时间</th><th class="numeric">状态</th></tr></thead><tbody id="connectionRows"><tr><td colspan="4" class="server-empty">暂无客户端连接</td></tr></tbody></table></div>
+          </div>
+          <div class="table-section"><div class="section-title-row"><h3 class="section-title">服务日志</h3><span class="panel-kicker">实时</span></div><ul class="log-list" id="serverLogs"><li><time>14:31:52</time><span>服务端已停止</span></li></ul></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="view" id="view-history" data-view-id="history" role="tabpanel" hidden>
+      <div class="page-heading">
+        <div><h1>历史记录</h1><p class="page-subtitle">查看已完成的测试摘要</p></div>
+        <div class="history-toolbar">
+          <input class="input search-input" id="historySearch" type="search" placeholder="搜索目标地址" aria-label="搜索目标地址">
+          <select class="select" id="historyProtocol" aria-label="筛选协议" style="width: 112px"><option value="all">全部协议</option><option value="TCP">TCP</option><option value="UDP">UDP</option></select>
+          <button class="secondary-button" id="exportHistory" type="button">导出 CSV</button>
+        </div>
+      </div>
+      <section class="panel" aria-label="测试历史列表">
+        <div class="table-wrap">
+          <table class="history-table"><thead><tr><th>时间</th><th>目标</th><th>协议</th><th>方向</th><th class="numeric">接收吞吐</th><th class="numeric">时长</th><th>状态</th></tr></thead><tbody id="historyRows"></tbody></table>
+        </div>
+      </section>
+    </section>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    "use strict";
+
+    const INITIAL_POINTS = [
+      { receiver: 902, sender: 924 }, { receiver: 918, sender: 936 },
+      { receiver: 931, sender: 948 }, { receiver: 909, sender: 929 },
+      { receiver: 946, sender: 958 }, { receiver: 921, sender: 943 },
+      { receiver: 938, sender: 951 }, { receiver: 914, sender: 939 },
+      { receiver: 955, sender: 969 }, { receiver: 932, sender: 950 }
+    ];
+    const UDP_SAMPLE_POINTS = [
+      { receiver: 92.1, sender: 100, jitter: .38, loss: .02 }, { receiver: 93.4, sender: 100, jitter: .41, loss: .03 },
+      { receiver: 94.8, sender: 100, jitter: .37, loss: .02 }, { receiver: 91.9, sender: 100, jitter: .45, loss: .04 },
+      { receiver: 95.2, sender: 100, jitter: .39, loss: .02 }, { receiver: 93.7, sender: 100, jitter: .43, loss: .03 },
+      { receiver: 94.4, sender: 100, jitter: .36, loss: .02 }, { receiver: 92.8, sender: 100, jitter: .42, loss: .03 },
+      { receiver: 95.5, sender: 100, jitter: .34, loss: .01 }, { receiver: 94.2, sender: 100, jitter: .40, loss: .03 }
+    ];
+    const state = {
+      view: "client",
+      protocol: "tcp",
+      reverse: false,
+      running: false,
+      tick: 0,
+      timer: null,
+      serverOneOffTimer: null,
+      points: INITIAL_POINTS.slice(),
+      rows: [],
+      history: [
+        { time: "今天 14:32:08", host: "192.168.1.20", port: 5201, protocol: "TCP", direction: "客户端 → 服务端", throughput: 932, duration: 10, status: "完成" },
+        { time: "今天 13:57:44", host: "10.0.0.15", port: 5201, protocol: "UDP", direction: "客户端 → 服务端", throughput: 94.2, duration: 15, status: "完成", jitter: 0.42, loss: 0.03 },
+        { time: "今天 11:20:16", host: "192.168.1.1", port: 5201, protocol: "TCP", direction: "服务端 → 客户端", throughput: 876, duration: 20, status: "完成" },
+        { time: "昨天 17:06:53", host: "172.16.4.8", port: 5201, protocol: "TCP", direction: "客户端 → 服务端", throughput: 811, duration: 10, status: "已停止" }
+      ],
+      serverRunning: false,
+      serverOneOff: false,
+      serverLogCount: 0
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+    const hostInput = $("#host");
+    const portInput = $("#port");
+    const durationInput = $("#duration");
+    const intervalInput = $("#interval");
+    const parallelInput = $("#parallel");
+    let toastTimer;
+
+    function showToast(message) {
+      const toast = $("#toast");
+      toast.textContent = message;
+      toast.classList.add("is-visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("is-visible"), 2400);
+    }
+
+    function formatBandwidth(value, protocol = state.protocol) {
+      if (protocol === "udp") return `${value.toFixed(1)} Mbit/s`;
+      return `${Math.round(value)} Mbit/s`;
+    }
+
+    function getTarget() {
+      return `${hostInput.value.trim() || "<目标地址>"}:${portInput.value || "5201"}`;
+    }
+
+    function getCommand() {
+      const parts = ["iperf3", "-c", hostInput.value.trim() || "<目标地址>", "-p", portInput.value || "5201"];
+      if (state.protocol === "udp") {
+        parts.push("-u", "-b", `${$("#bandwidth").value || "100"}${$("#bandwidthUnit").value}`);
+      }
+      parts.push("-t", durationInput.value || "10", "-i", intervalInput.value || "1", "-P", parallelInput.value || "1");
+      if (state.reverse) parts.push("-R");
+      const bindAddress = $("#bindAddress").value.trim() || ($("#interface").value === "auto" ? "" : $("#interface").value);
+      if (bindAddress) parts.push("-B", bindAddress);
+      if ($("#ipVersion").value) parts.push(`-${$("#ipVersion").value}`);
+      return parts.join(" ");
+    }
+
+    function renderCommand() {
+      $("#commandPreview").textContent = getCommand();
+      $("#resultTarget").textContent = `${getTarget()} · ${state.protocol.toUpperCase()} · ${state.reverse ? "服务端 → 客户端" : "接收端"}`;
+    }
+
+    function updateProtocol() {
+      const isUdp = state.protocol === "udp";
+      $$("[data-protocol]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.protocol === state.protocol)));
+      $("#bandwidthField").hidden = !isUdp;
+      $("#udpLengthField").hidden = !isUdp;
+      $("#configProtocolBadge").textContent = state.protocol.toUpperCase();
+      $("#configProtocolBadge").classList.toggle("udp", isUdp);
+      $("#intervalNote").textContent = `${intervalInput.value || 1} 秒间隔`;
+      renderCommand();
+      renderMetrics();
+      renderChart();
+      renderDetails();
+      renderRawOutput();
+    }
+
+    function renderMetrics(point = state.points[state.points.length - 1]) {
+      const metrics = $("#metrics");
+      const direction = state.reverse ? "服务端 → 客户端" : "客户端 → 服务端";
+      const items = state.protocol === "udp" ? [
+        { label: "接收端吞吐", value: point ? point.receiver.toFixed(1) : "—", unit: "Mbit/s", foot: direction, accent: "blue" },
+        { label: "目标带宽", value: `${$("#bandwidth").value || 100}`, unit: `${$("#bandwidthUnit").value}bit/s`, foot: "客户端发送目标", accent: "green" },
+        { label: "抖动", value: point?.jitter?.toFixed(2) || "0.42", unit: "ms", foot: "接收端统计", accent: "orange" },
+        { label: "丢包率", value: point?.loss?.toFixed(2) || "0.03", unit: "%", foot: "接收端统计", accent: "orange" }
+      ] : [
+        { label: "接收端吞吐", value: point ? Math.round(point.receiver) : "—", unit: "Mbit/s", foot: direction, accent: "blue" },
+        { label: "发送端吞吐", value: point ? Math.round(point.sender) : "—", unit: "Mbit/s", foot: "发送端统计", accent: "orange" },
+        { label: "TCP 重传", value: state.running ? String(Math.max(0, state.tick - 1)) : "16", unit: "次", foot: "发送端统计", accent: "green" },
+        { label: "测试时长", value: state.running ? `${Math.min(state.tick * Number(intervalInput.value || 1), Number(durationInput.value || 10))}.0` : "10.0", unit: "秒", foot: state.running ? "正在采样" : "报告间隔 1 秒", accent: "green" }
+      ];
+      metrics.replaceChildren(...items.map((item) => {
+        const article = document.createElement("div");
+        article.className = "metric";
+        const label = document.createElement("div");
+        label.className = "metric-label";
+        label.textContent = item.label;
+        const value = document.createElement("div");
+        value.className = `metric-value metric-accent-${item.accent}`;
+        const strong = document.createElement("strong");
+        strong.textContent = item.value;
+        const unit = document.createElement("span");
+        unit.textContent = item.unit;
+        value.append(strong, unit);
+        const foot = document.createElement("div");
+        foot.className = "metric-foot";
+        foot.textContent = item.foot;
+        article.append(label, value, foot);
+        return article;
+      }));
+    }
+
+    function pointPath(points, key, maxValue, xStart = 70, xEnd = 870, yTop = 20, yBottom = 202) {
+      if (!points.length) return "";
+      const count = Math.max(points.length - 1, 1);
+      return points.map((point, index) => {
+        const x = xStart + ((xEnd - xStart) * index / count);
+        const y = yBottom - (Math.max(0, Math.min(point[key], maxValue)) / maxValue) * (yBottom - yTop);
+        return `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(" ");
+    }
+
+    function renderChart() {
+      const grid = $("#chartGrid");
+      const yLabels = $("#chartYAxisLabels");
+      const xLabels = $("#chartLabels");
+      const udpUnits = { K: .001, M: 1, G: 1000 };
+      const target = Number($("#bandwidth").value || 100) * udpUnits[$("#bandwidthUnit").value];
+      const observedMax = state.points.reduce((max, point) => Math.max(max, point.receiver, point.sender), 0);
+      const maxValue = state.protocol === "udp" ? Math.max(100, target * 1.1) : Math.max(1100, Math.ceil(observedMax / 200) * 200);
+      const rows = [0, 1, 2, 3, 4].map((index) => maxValue * index / 4);
+      const nodes = [];
+      const axisLabels = [];
+      rows.forEach((value) => {
+        const y = 202 - (value / maxValue) * 182;
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", "70"); line.setAttribute("x2", "870");
+        line.setAttribute("y1", y); line.setAttribute("y2", y); line.setAttribute("class", "chart-gridline");
+        nodes.push(line);
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("x", "0"); label.setAttribute("y", y + 3); label.setAttribute("class", "chart-label");
+        label.textContent = `${Math.round(value)} M`;
+        axisLabels.push(label);
+      });
+      grid.replaceChildren(...nodes);
+      yLabels.replaceChildren(...axisLabels);
+      $("#receiverPath").setAttribute("d", pointPath(state.points, "receiver", maxValue));
+      $("#senderPath").setAttribute("d", pointPath(state.points, "sender", maxValue));
+      const receiverPath = pointPath(state.points, "receiver", maxValue);
+      const lastIndex = Math.max(state.points.length - 1, 1);
+      const lastX = 70 + (800 * (state.points.length - 1) / lastIndex);
+      const lastY = state.points.length ? 202 - (Math.min(state.points[state.points.length - 1].receiver, maxValue) / maxValue) * 182 : 202;
+      $("#chartArea").setAttribute("d", state.points.length ? `${receiverPath} L${lastX.toFixed(1)},202 L70,202 Z` : "");
+      const point = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      point.setAttribute("cx", lastX); point.setAttribute("cy", lastY); point.setAttribute("r", "4"); point.setAttribute("class", "chart-point");
+      $("#chartPoints").replaceChildren(...(state.points.length ? [point] : []));
+      const timeLabels = [];
+      const xPositions = [70, 336, 603, 870];
+      const chartStart = state.rows.length ? state.rows[0].start : 0;
+      const chartEnd = state.rows.length ? state.rows[state.rows.length - 1].end : Number(durationInput.value || 10);
+      const tickLabels = state.points.length ? [0, 1 / 3, 2 / 3, 1].map((fraction) => `${Math.round(chartStart + (chartEnd - chartStart) * fraction)}s`) : [];
+      tickLabels.forEach((text, index) => {
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("x", xPositions[index]); label.setAttribute("y", "230"); label.setAttribute("class", "chart-label");
+        label.textContent = text;
+        timeLabels.push(label);
+      });
+      xLabels.replaceChildren(...timeLabels);
+      $("#chartEmpty").hidden = state.points.length > 0;
+    }
+
+    function renderDetails() {
+      const isUdp = state.protocol === "udp";
+      const head = $("#detailHead");
+      const columns = isUdp ? ["时间区间", "传输量", "接收带宽", "抖动", "丢包"] : ["时间区间", "传输量", "接收带宽", "发送带宽", "重传"];
+      head.replaceChildren(...columns.map((text, index) => {
+        const th = document.createElement("th");
+        th.textContent = text;
+        if (index > 0) th.className = "numeric";
+        return th;
+      }));
+      const rows = state.rows.length ? state.rows : state.points.map((point, index) => ({
+        start: index, end: index + 1, receiver: point.receiver, sender: point.sender,
+        jitter: point.jitter ?? 0.42, loss: point.loss ?? 0.03, retransmits: index % 3 === 0 ? 2 : 1
+      }));
+      $("#detailRows").replaceChildren(...rows.map((row) => {
+        const tr = document.createElement("tr");
+        const values = isUdp
+          ? [`${row.start}.00-${row.end}.00`, `${(row.receiver / 8).toFixed(1)} MB`, `${row.receiver.toFixed(1)} Mbit/s`, `${row.jitter.toFixed(2)} ms`, `${row.loss.toFixed(2)}%`]
+          : [`${row.start}.00-${row.end}.00`, `${(row.receiver / 8).toFixed(1)} MB`, `${Math.round(row.receiver)} Mbit/s`, `${Math.round(row.sender)} Mbit/s`, `${row.retransmits} 次`];
+        values.forEach((text, index) => {
+          const td = document.createElement("td");
+          td.textContent = text;
+          if (index > 0) td.className = "numeric";
+          tr.append(td);
+        });
+        return tr;
+      }));
+    }
+
+    function renderRawOutput() {
+      if (!state.points.length) {
+        $("#rawOutput").textContent = "Waiting for simulated interval data...\nDemo mode; no iPerf3 process was started.";
+        return;
+      }
+      const point = state.points[state.points.length - 1];
+      const duration = state.rows.length ? state.rows[state.rows.length - 1].end : Number(durationInput.value || 10);
+      const transferGBytes = (point.receiver * duration / 8 / 1000).toFixed(2);
+      if (state.protocol === "udp") {
+        const bandwidth = Number($("#bandwidth").value || 100) * ({ K: .001, M: 1, G: 1000 }[$("#bandwidthUnit").value] || 1);
+        const datagrams = Math.max(1, Math.round(bandwidth * duration * 1e6 / (Number($("#udpLength").value || 1200) * 8)));
+        const jitter = point.jitter ?? .42;
+        const loss = point.loss ?? .03;
+        const lost = Math.round(datagrams * loss / 100);
+        $("#rawOutput").textContent = `[ ID] Interval           Transfer     Bitrate         Jitter    Lost/Total Datagrams\n[  5] 0.00-${duration.toFixed(2)} sec  ${transferGBytes} GBytes  ${point.receiver.toFixed(1)} Mbits/sec  ${jitter.toFixed(2)} ms  ${lost}/${datagrams} (${loss.toFixed(3)}%)\n[  5] Sent ${datagrams} datagrams\n\nDemo data; no iPerf3 process was started.`;
+      } else {
+        const retransmits = state.rows.reduce((total, row) => total + (row.retransmits || 0), 0);
+        $("#rawOutput").textContent = `[ ID] Interval           Transfer     Bitrate         Retr\n[  5] 0.00-${duration.toFixed(2)} sec  ${transferGBytes} GBytes  ${Math.round(point.sender)} Mbits/sec  ${retransmits}  sender\n[  5] 0.00-${duration.toFixed(2)} sec  ${transferGBytes} GBytes  ${Math.round(point.receiver)} Mbits/sec       receiver\n\nDemo data; no iPerf3 process was started.`;
+      }
+    }
+
+    function validateClient() {
+      const host = hostInput.value.trim();
+      const port = Number(portInput.value);
+      const duration = Number(durationInput.value);
+      const interval = Number(intervalInput.value);
+      const parallel = Number(parallelInput.value);
+      let message = "";
+      if (!host) message = "请输入目标地址。";
+      else if (!Number.isInteger(port) || port < 1 || port > 65535) message = "端口范围应为 1–65535。";
+      else if (!Number.isInteger(duration) || duration < 1 || duration > 3600) message = "时长范围应为 1–3600 秒。";
+      else if (!Number.isInteger(interval) || interval < 1 || interval > duration) message = "报告间隔应为正整数，且不大于测试时长。";
+      else if (!Number.isInteger(parallel) || parallel < 1 || parallel > 128) message = "并行流数量范围应为 1–128。";
+      else if (state.protocol === "udp" && (!Number.isFinite(Number($("#bandwidth").value)) || Number($("#bandwidth").value) < 1)) message = "请输入有效的 UDP 目标带宽。";
+      $("#formError").textContent = message;
+      return !message;
+    }
+
+    function setRunning(running) {
+      state.running = running;
+      $("#startTest").hidden = running;
+      $("#stopTest").hidden = !running;
+      $("#progressTrack").hidden = !running;
+      $("#engineState").textContent = running ? "模拟运行中" : "引擎就绪";
+      $("#engineDot").classList.toggle("is-running", running);
+      $("#resultState").classList.toggle("is-running", running);
+      $("#resultState").classList.remove("is-error");
+      $("#resultState").querySelector("span:last-child").textContent = running ? "模拟运行中" : "演示样例";
+      $("#metrics").querySelectorAll(".metric").forEach((item) => item.style.opacity = running ? ".9" : "1");
+      [hostInput, portInput, durationInput, intervalInput, parallelInput, $("#interface"), $("#bandwidth"), $("#bandwidthUnit"), $("#bindAddress"), $("#ipVersion"), $("#udpLength")].forEach((input) => { if (input) input.disabled = running; });
+      $$("[data-protocol], #reverseSwitch").forEach((control) => { control.disabled = running; });
+    }
+
+    function recordCurrentResult(status) {
+      const point = state.points[state.points.length - 1];
+      if (!point) return;
+      const record = {
+        time: `今天 ${new Date().toLocaleTimeString("zh-CN", { hour12: false })}`,
+        host: hostInput.value.trim(), port: Number(portInput.value), protocol: state.protocol.toUpperCase(),
+        direction: state.reverse ? "服务端 → 客户端" : "客户端 → 服务端",
+        throughput: state.protocol === "udp" ? Number(point.receiver.toFixed(1)) : Math.round(point.receiver),
+        duration: Math.min(state.tick * Number(intervalInput.value || 1), Number(durationInput.value || 10)),
+        status,
+        jitter: point.jitter,
+        loss: point.loss
+      };
+      state.history.unshift(record);
+      $("#resultTime").textContent = `最近一次 · ${new Date().toLocaleTimeString("zh-CN", { hour12: false })}`;
+      renderHistory();
+    }
+
+    function beginTest() {
+      if (state.running || !validateClient()) return;
+      state.points = [];
+      state.rows = [];
+      state.tick = 0;
+      setRunning(true);
+      $("#resultState").querySelector("span:last-child").textContent = "模拟运行中";
+      $("#progressFill").style.width = "0%";
+      renderChart(); renderMetrics(); renderDetails();
+      renderRawOutput();
+      const duration = Number(durationInput.value);
+      const interval = Number(intervalInput.value);
+      const streamMultiplier = Math.min(Number(parallelInput.value), 8);
+      state.timer = setInterval(() => {
+        state.tick += 1;
+        const base = state.protocol === "udp" ? Number($("#bandwidth").value) * ({ K: .001, M: 1, G: 1000 }[$("#bandwidthUnit").value] || 1) : 910 * streamMultiplier;
+        const jitterFactor = .965 + Math.random() * .065;
+        const receiver = Math.min(1090, Math.max(1, base * jitterFactor));
+        const point = state.protocol === "udp"
+          ? { receiver, sender: base, jitter: .24 + Math.random() * .45, loss: Math.random() * .08 }
+          : { receiver, sender: receiver + 8 + Math.random() * 22, retransmits: Math.floor(Math.random() * 3) };
+        state.points.push(point);
+        state.rows.push({ start: (state.tick - 1) * interval, end: Math.min(state.tick * interval, duration), ...point });
+        if (state.points.length > 10) state.points.shift();
+        if (state.rows.length > 10) state.rows.shift();
+        const elapsed = Math.min(state.tick * interval, duration);
+        $("#progressFill").style.width = `${Math.min(100, elapsed / duration * 100)}%`;
+        renderChart(); renderMetrics(point); renderDetails(); renderRawOutput();
+        if (elapsed >= duration) finishTest("完成");
+      }, 700);
+    }
+
+    function finishTest(status = "已停止") {
+      if (!state.running) return;
+      clearInterval(state.timer);
+      state.timer = null;
+      recordCurrentResult(status);
+      setRunning(false);
+      $("#resultState").querySelector("span:last-child").textContent = status === "完成" ? "模拟完成" : "已停止";
+      $("#resultState").classList.toggle("is-running", false);
+      renderMetrics(state.points[state.points.length - 1]);
+      renderRawOutput();
+    }
+
+    function renderHistory() {
+      const query = $("#historySearch").value.trim().toLowerCase();
+      const protocol = $("#historyProtocol").value;
+      const rows = state.history.filter((record) => {
+        return (!query || record.host.toLowerCase().includes(query)) && (protocol === "all" || record.protocol === protocol);
+      });
+      $("#historyRows").replaceChildren(...rows.map((record, index) => {
+        const tr = document.createElement("tr");
+        tr.dataset.recordIndex = String(state.history.indexOf(record));
+        const values = [record.time, `${record.host}:${record.port}`, record.protocol, record.direction, `${record.throughput} Mbit/s`, `${record.duration} 秒`, record.status];
+        values.forEach((text, column) => {
+          const td = document.createElement("td");
+          if (column === 2) {
+            const badge = document.createElement("span");
+            badge.className = `protocol-badge${record.protocol === "UDP" ? " udp" : ""}`;
+            badge.textContent = text;
+            td.append(badge);
+          } else td.textContent = text;
+          if (column === 4 || column === 5) td.className = "numeric";
+          tr.append(td);
+        });
+        return tr;
+      }));
+    }
+
+    function setView(view) {
+      state.view = view;
+      $$("[data-view]").forEach((button) => button.setAttribute("aria-selected", String(button.dataset.view === view)));
+      $$("[data-view-id]").forEach((panel) => { panel.hidden = panel.dataset.viewId !== view; });
+    }
+
+    function updateServerCommand() {
+      $("#serverCommand").textContent = `iperf3 -s -p ${$("#serverPort").value || "5201"}${state.serverOneOff ? " -1" : ""}${$("#serverBind").value !== "0.0.0.0" ? ` -B ${$("#serverBind").value}` : ""}`;
+      $("#serverStateDetail").textContent = `端口 ${$("#serverPort").value || "5201"} · ${$("#serverBind").value}`;
+    }
+
+    function addServerLog(message) {
+      const time = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+      const item = document.createElement("li");
+      const stamp = document.createElement("time");
+      stamp.textContent = time;
+      const text = document.createElement("span");
+      text.textContent = message;
+      item.append(stamp, text);
+      $("#serverLogs").prepend(item);
+      while ($("#serverLogs").children.length > 6) $("#serverLogs").lastElementChild.remove();
+    }
+
+    function setServerRunning(running) {
+      state.serverRunning = running;
+      if (!running && state.serverOneOffTimer) {
+        clearTimeout(state.serverOneOffTimer);
+        state.serverOneOffTimer = null;
+      }
+      $("#startServer").hidden = running;
+      $("#stopServer").hidden = !running;
+      $("#serverPort").disabled = running;
+      $("#serverBind").disabled = running;
+      $("#oneOffSwitch").disabled = running;
+      $("#serverStateTitle").textContent = running ? "正在监听" : "未监听";
+      $("#serverStatePill").querySelector("span:last-child").textContent = running ? "模拟运行中" : "已停止";
+      $("#serverStatePill").classList.toggle("is-running", running);
+    }
+
+    function downloadFile(filename, content, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast("命令已复制。");
+      } catch (error) {
+        showToast(`复制失败：${error.message || "浏览器未授权剪贴板访问"}`);
+      }
+    }
+
+    $$("[data-view]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
+    $$("[data-protocol]").forEach((button) => button.addEventListener("click", () => {
+      if (state.running) return;
+      state.protocol = button.dataset.protocol;
+      state.points = (state.protocol === "udp" ? UDP_SAMPLE_POINTS : INITIAL_POINTS).slice();
+      state.rows = [];
+      updateProtocol();
+    }));
+    [hostInput, portInput, durationInput, intervalInput, parallelInput, $("#bandwidth"), $("#bandwidthUnit"), $("#bindAddress"), $("#ipVersion"), $("#interface")].forEach((input) => {
+      input.addEventListener("input", () => { renderCommand(); renderChart(); if (state.protocol === "udp") renderMetrics(); });
+      input.addEventListener("change", () => { renderCommand(); renderChart(); if (state.protocol === "udp") renderMetrics(); $("#intervalNote").textContent = `${intervalInput.value || 1} 秒间隔`; });
+    });
+    $("#reverseSwitch").addEventListener("click", (event) => {
+      state.reverse = !state.reverse;
+      event.currentTarget.setAttribute("aria-checked", String(state.reverse));
+      renderCommand();
+    });
+    $("#startTest").addEventListener("click", beginTest);
+    $("#stopTest").addEventListener("click", () => finishTest("已停止"));
+    $("#copyCommand").addEventListener("click", () => copyText(getCommand()));
+    $("#exportResult").addEventListener("click", () => {
+      const report = { mode: "demo", target: getTarget(), protocol: state.protocol.toUpperCase(), direction: state.reverse ? "server-to-client" : "client-to-server", command: getCommand(), intervals: state.rows, points: state.points };
+      downloadFile("iperf3-demo-result.json", JSON.stringify(report, null, 2), "application/json");
+      showToast("JSON 结果已导出。");
+    });
+    $("#serverPort").addEventListener("input", updateServerCommand);
+    $("#serverBind").addEventListener("change", updateServerCommand);
+    $("#oneOffSwitch").addEventListener("click", (event) => {
+      state.serverOneOff = !state.serverOneOff;
+      event.currentTarget.setAttribute("aria-checked", String(state.serverOneOff));
+      updateServerCommand();
+    });
+    $("#startServer").addEventListener("click", () => {
+      const port = Number($("#serverPort").value);
+      if (!Number.isInteger(port) || port < 1 || port > 65535) { $("#serverError").textContent = "端口范围应为 1–65535。"; return; }
+      $("#serverError").textContent = "";
+      setServerRunning(true);
+      addServerLog(`开始监听 ${$("#serverBind").value}:${port}（模拟）`);
+      $("#connectionRows").replaceChildren();
+      $("#connectionCount").textContent = "1 个连接 · 示例";
+      const tr = document.createElement("tr");
+      [`192.168.1.20:${port}`, "TCP", new Date().toLocaleTimeString("zh-CN", { hour12: false }), "模拟连接"].forEach((value, index) => {
+        const td = document.createElement("td"); td.textContent = value; if (index === 3) td.className = "numeric"; tr.append(td);
+      });
+      $("#connectionRows").append(tr);
+      if (state.serverOneOff) {
+        state.serverOneOffTimer = setTimeout(() => {
+          if (!state.serverRunning) return;
+          setServerRunning(false);
+          addServerLog("单次测试完成，服务端已自动停止");
+          $("#connectionCount").textContent = "0 个连接";
+          const emptyRow = document.createElement("tr");
+          const emptyCell = document.createElement("td");
+          emptyCell.colSpan = 4; emptyCell.className = "server-empty"; emptyCell.textContent = "暂无客户端连接";
+          emptyRow.append(emptyCell);
+          $("#connectionRows").replaceChildren(emptyRow);
+        }, 1800);
+      }
+    });
+    $("#stopServer").addEventListener("click", () => {
+      setServerRunning(false);
+      addServerLog("服务端已停止");
+      $("#connectionCount").textContent = "0 个连接";
+      const tr = document.createElement("tr"); const td = document.createElement("td");
+      td.colSpan = 4; td.className = "server-empty"; td.textContent = "暂无客户端连接"; tr.append(td);
+      $("#connectionRows").replaceChildren(tr);
+    });
+    $("#historySearch").addEventListener("input", renderHistory);
+    $("#historyProtocol").addEventListener("change", renderHistory);
+    $("#historyRows").addEventListener("click", (event) => {
+      const row = event.target.closest("tr[data-record-index]");
+      if (!row) return;
+      const record = state.history[Number(row.dataset.recordIndex)];
+      hostInput.value = record.host;
+      portInput.value = record.port;
+      state.protocol = record.protocol.toLowerCase();
+      state.reverse = record.direction.startsWith("服务端");
+      $("#reverseSwitch").setAttribute("aria-checked", String(state.reverse));
+      durationInput.value = record.duration;
+      state.points = (state.protocol === "udp" ? UDP_SAMPLE_POINTS : INITIAL_POINTS).slice();
+      state.rows = [];
+      updateProtocol(); renderChart(); renderMetrics(); renderDetails(); renderRawOutput();
+      $("#resultTarget").textContent = `${record.host}:${record.port} · ${record.protocol} · ${record.direction}`;
+      $("#resultState").querySelector("span:last-child").textContent = record.status === "完成" ? "模拟样例" : record.status;
+      setView("client");
+    });
+    $("#exportHistory").addEventListener("click", () => {
+      const columns = ["time", "host", "port", "protocol", "direction", "throughput_mbit_s", "duration_seconds", "status"];
+      const csv = [columns.join(","), ...state.history.map((record) => [record.time, record.host, record.port, record.protocol, record.direction, record.throughput, record.duration, record.status].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","))].join("\r\n");
+      downloadFile("iperf3-history.csv", "\ufeff" + csv, "text/csv;charset=utf-8");
+      showToast("CSV 历史记录已导出。");
+    });
+
+    updateProtocol();
+    renderMetrics();
+    renderChart();
+    renderDetails();
+    renderRawOutput();
+    renderHistory();
+    updateServerCommand();
+  </script>
+</body>
+</html>

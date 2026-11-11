@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f5f7">
+  <link rel="icon" href="data:,">
+  <title>iPerf3 网络测试台</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 17V7"></path>
+          <path d="M20 17V7"></path>
+          <path d="M7 12h10"></path>
+          <path d="m14 9 3 3-3 3"></path>
+          <path d="m10 15-3-3 3-3"></path>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">iPerf3 网络测试台</div>
+        <div class="brand-subtitle">本机引擎 · 真实测量</div>
+      </div>
+    </div>
+    <nav class="nav-tabs" role="tablist" aria-label="主视图">
+      <button class="nav-tab" type="button" role="tab" data-view="client" aria-selected="true">客户端</button>
+      <button class="nav-tab" type="button" role="tab" data-view="server" aria-selected="false">服务端</button>
+      <button class="nav-tab" type="button" role="tab" data-view="history" aria-selected="false">历史记录</button>
+    </nav>
+    <div class="topbar-right">
+      <div class="engine-status" title="随包 iPerf3 引擎状态">
+        <span class="status-dot" id="engineDot"></span>
+        <span id="engineText">正在检测引擎…</span>
+        <span class="engine-version" id="engineVersion"></span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="view" id="view-client" data-view-id="client" role="tabpanel">
+      <div class="page-heading">
+        <div>
+          <h1>客户端测试</h1>
+          <p class="page-subtitle">配置目标与测试参数，查看真实上传、下载和双向吞吐</p>
+        </div>
+        <div class="page-actions">
+          <button class="secondary-button" id="exportCurrent" type="button" disabled>导出 JSON</button>
+        </div>
+      </div>
+
+      <div class="layout">
+        <section class="panel config-column" aria-labelledby="configHeading">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title" id="configHeading">测试配置</h2>
+              <div class="panel-kicker" id="configKicker">客户端 → 远端服务端</div>
+            </div>
+            <span class="protocol-badge" id="configProtocolBadge">TCP</span>
+          </div>
+          <div class="panel-body">
+            <div class="field">
+              <label for="host">目标地址</label>
+              <input class="input" id="host" name="host" type="text" value="127.0.0.1" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="port">端口</label>
+                <input class="input" id="port" name="port" type="number" min="1" max="65535" value="5201">
+              </div>
+              <div class="field">
+                <label for="interface">本地接口</label>
+                <select class="select" id="interface" name="interface">
+                  <option value="">自动选择</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <span class="field-label">协议</span>
+              <div class="segmented" role="group" aria-label="传输协议">
+                <button class="segment-button" type="button" data-protocol="tcp" aria-pressed="true">TCP</button>
+                <button class="segment-button" type="button" data-protocol="udp" aria-pressed="false">UDP</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <span class="field-label">方向</span>
+              <div class="segmented segmented-3" role="group" aria-label="测试方向">
+                <button class="segment-button" type="button" data-direction="upload" aria-pressed="true">上传</button>
+                <button class="segment-button" type="button" data-direction="download" aria-pressed="false">下载</button>
+                <button class="segment-button" type="button" data-direction="bidirectional" id="directionBidirectional" aria-pressed="false">双向</button>
+              </div>
+              <div class="field-hint" id="directionHint">上传：客户端 → 服务端；下载：服务端 → 客户端；双向：两端同时收发。</div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="duration">时长</label>
+                <div class="unit-field"><input id="duration" type="number" min="0" max="3600" value="10"><select aria-label="时长单位" disabled><option>秒</option></select></div>
+                <div class="field-hint">0 = 不限时，需手动停止</div>
+              </div>
+              <div class="field">
+                <label for="interval">报告间隔</label>
+                <div class="unit-field"><input id="interval" type="number" min="1" max="3600" value="1"><select aria-label="报告间隔单位" disabled><option>秒</option></select></div>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="parallel">并行流</label>
+                <div class="unit-field"><input id="parallel" type="number" min="1" max="128" value="1"><select aria-label="并行流单位" disabled><option>条</option></select></div>
+              </div>
+              <div class="field" id="bandwidthField" hidden>
+                <label for="bandwidth">目标带宽</label>
+                <div class="unit-field"><input id="bandwidth" type="number" min="1" value="100"><select id="bandwidthUnit" aria-label="带宽单位"><option value="M">Mbit/s</option><option value="G">Gbit/s</option><option value="K">Kbit/s</option></select></div>
+              </div>
+            </div>
+
+            <details class="advanced">
+              <summary>高级参数</summary>
+              <div class="advanced-content">
+                <div class="field-row">
+                  <div class="field">
+                    <label for="bindAddress">绑定地址</label>
+                    <input class="input" id="bindAddress" type="text" placeholder="可选">
+                  </div>
+                  <div class="field">
+                    <label for="ipVersion">IP 版本</label>
+                    <select class="select" id="ipVersion">
+                      <option value="">自动</option>
+                      <option value="4">IPv4</option>
+                      <option value="6">IPv6</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field" id="udpLengthField" hidden>
+                  <label for="udpLength">UDP 数据报长度</label>
+                  <div class="unit-field"><input id="udpLength" type="number" min="1" max="65507" value="1200"><select aria-label="数据报长度单位" disabled><option>字节</option></select></div>
+                </div>
+              </div>
+            </details>
+
+            <div class="field-error" id="formError" role="alert" aria-live="polite"></div>
+            <button class="primary-button" id="startTest" type="button">开始测试</button>
+            <button class="danger-button primary-button" id="stopTest" type="button" hidden>停止测试</button>
+            <div class="command-line">
+              <div class="command-head"><span>命令预览</span><button class="command-copy" id="copyCommand" type="button">复制命令</button></div>
+              <code class="command" id="commandPreview">iperf3 -c 127.0.0.1 -p 5201 -t 10 -i 1 -P 1</code>
+            </div>
+          </div>
+        </section>
+
+        <div class="results-column">
+          <section class="panel" aria-labelledby="resultHeading">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title" id="resultHeading">测试结果</h2>
+                <div class="panel-kicker" id="resultTarget">尚未运行测试</div>
+              </div>
+              <div class="result-summary">
+                <span class="state-pill" id="resultState"><span class="status-dot"></span><span>就绪</span></span>
+                <span class="result-time" id="resultTime"></span>
+              </div>
+            </div>
+            <div class="error-box" id="runErrorBox" hidden></div>
+            <div class="metrics" id="metrics"></div>
+            <div class="chart-section">
+              <div class="section-title-row">
+                <h3 class="section-title">带宽趋势</h3>
+                <div class="chart-legend" id="chartLegend" aria-label="图例"></div>
+              </div>
+              <div class="chart-wrap">
+                <svg id="throughputChart" viewBox="0 0 900 250" role="img" aria-label="每秒吞吐趋势图" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="uploadFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1769e0" stop-opacity=".14"/><stop offset="1" stop-color="#1769e0" stop-opacity="0"/></linearGradient>
+                    <linearGradient id="downloadFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#dc7948" stop-opacity=".12"/><stop offset="1" stop-color="#dc7948" stop-opacity="0"/></linearGradient>
+                  </defs>
+                  <g id="chartGrid"></g>
+                  <g id="chartYAxisLabels"></g>
+                  <path class="chart-area" id="chartArea"></path>
+                  <path class="chart-sender" id="downloadPath"></path>
+                  <path class="chart-receiver" id="uploadPath"></path>
+                  <g id="chartPoints"></g>
+                  <g id="chartLabels"></g>
+                </svg>
+                <div class="chart-empty" id="chartEmpty">等待测试数据</div>
+              </div>
+            </div>
+            <div class="progress-track" id="progressTrack" hidden><div class="progress-fill" id="progressFill"></div></div>
+            <div class="table-section">
+              <div class="section-title-row">
+                <h3 class="section-title">区间明细</h3>
+                <span class="panel-kicker" id="intervalNote">尚未运行</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr id="intervalHead"></tr></thead>
+                  <tbody id="intervalRows"><tr class="empty-row"><td>等待测试数据</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <details class="raw-output">
+              <summary id="rawOutputSummary">iPerf3 原始输出</summary>
+              <pre id="rawOutput"></pre>
+            </details>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-server" data-view-id="server" role="tabpanel" hidden>
+      <div class="page-heading">
+        <div><h1>服务端</h1><p class="page-subtitle">管理本机 iPerf3 监听进程、连接记录与日志</p></div>
+      </div>
+      <div class="server-layout">
+        <section class="panel" aria-labelledby="serverConfigHeading">
+          <div class="panel-head">
+            <div><h2 class="panel-title" id="serverConfigHeading">监听配置</h2><div class="panel-kicker">等待客户端连接</div></div>
+            <span class="protocol-badge">SERVER</span>
+          </div>
+          <div class="panel-body">
+            <div class="field-row">
+              <div class="field"><label for="serverPort">监听端口</label><input class="input" id="serverPort" type="number" min="1" max="65535" value="5201"></div>
+              <div class="field"><label for="serverBind">绑定地址</label><select class="select" id="serverBind"><option value="">所有接口</option></select></div>
+            </div>
+            <div class="switch-row">
+              <div class="switch-copy">单次连接 <small>完成一次测试后自动停止</small></div>
+              <button class="switch" id="oneOffSwitch" type="button" role="switch" aria-checked="false" aria-label="单次连接"></button>
+            </div>
+            <div class="field-error" id="serverError" role="alert" aria-live="polite"></div>
+            <button class="primary-button" id="startServer" type="button">启动服务端</button>
+            <button class="danger-button primary-button" id="stopServer" type="button" hidden>停止服务端</button>
+            <div class="command-line">
+              <div class="command-head"><span>命令预览</span><button class="command-copy" id="copyServerCommand" type="button">复制命令</button></div>
+              <code class="command" id="serverCommand">iperf3 -s -p 5201</code>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="serverMonitorHeading">
+          <div class="panel-head">
+            <div><h2 class="panel-title" id="serverMonitorHeading">服务端状态</h2><div class="panel-kicker">本地监听与客户端连接</div></div>
+            <span class="state-pill" id="serverStatePill"><span class="status-dot"></span><span>已停止</span></span>
+          </div>
+          <div class="server-state">
+            <div><strong id="serverStateTitle">未监听</strong><span id="serverStateDetail">端口 5201 · 所有接口</span></div>
+            <span class="panel-kicker" id="serverStateTime"></span>
+          </div>
+          <div class="error-box" id="serverRunError" hidden></div>
+          <div class="server-test-head">
+            <div>
+              <span class="panel-kicker">当前 / 最近连接</span>
+              <strong id="serverTestTarget">等待客户端连接</strong>
+            </div>
+            <span class="state-pill" id="serverTestState"><span class="status-dot"></span><span>—</span></span>
+          </div>
+          <div class="metrics" id="serverMetrics"></div>
+          <div class="chart-section">
+            <div class="section-title-row">
+              <h3 class="section-title">带宽趋势</h3>
+              <div class="chart-legend" id="serverChartLegend" aria-label="图例"></div>
+            </div>
+            <div class="chart-wrap">
+              <svg id="serverChart" viewBox="0 0 900 250" role="img" aria-label="服务端吞吐趋势图" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="serverUploadFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1769e0" stop-opacity=".14"/><stop offset="1" stop-color="#1769e0" stop-opacity="0"/></linearGradient>
+                  <linearGradient id="serverDownloadFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#dc7948" stop-opacity=".12"/><stop offset="1" stop-color="#dc7948" stop-opacity="0"/></linearGradient>
+                </defs>
+                <g id="serverChartGrid"></g>
+                <g id="serverChartYAxisLabels"></g>
+                <path class="chart-area" id="serverChartArea"></path>
+                <path class="chart-sender" id="serverDownloadPath"></path>
+                <path class="chart-receiver" id="serverUploadPath"></path>
+                <g id="serverChartPoints"></g>
+                <g id="serverChartLabels"></g>
+              </svg>
+              <div class="chart-empty" id="serverChartEmpty">等待客户端连接</div>
+            </div>
+          </div>
+          <div class="table-section">
+            <div class="section-title-row"><h3 class="section-title">区间明细</h3><span class="panel-kicker" id="serverIntervalNote">等待客户端连接</span></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr id="serverIntervalHead"></tr></thead>
+                <tbody id="serverIntervalRows"><tr class="empty-row"><td>暂无区间数据</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="table-section">
+            <div class="section-title-row"><h3 class="section-title">连接记录</h3><span class="panel-kicker" id="connectionCount">0 个连接</span></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>客户端</th><th>协议</th><th>方向</th><th class="numeric">上传</th><th class="numeric">下载</th><th>开始时间</th><th>结束时间</th><th class="numeric">状态</th></tr></thead>
+                <tbody id="serverConnectionRows"><tr class="empty-row"><td colspan="8">暂无客户端连接</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="table-section">
+            <div class="section-title-row"><h3 class="section-title">服务日志</h3><span class="panel-kicker" id="serverLogCount">实时</span></div>
+            <ul class="log-list server-log-list" id="serverLogs"><li><time>--:--:--</time><span>服务端未启动</span></li></ul>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="view" id="view-history" data-view-id="history" role="tabpanel" hidden>
+      <div class="page-heading">
+        <div><h1>历史记录</h1><p class="page-subtitle">查询、清理和导出本机测试记录</p></div>
+        <div class="history-toolbar">
+          <input class="input search-input" id="historySearch" type="search" placeholder="搜索目标地址" aria-label="搜索目标地址">
+          <select class="select" id="historyProtocol" aria-label="筛选协议">
+            <option value="all">全部协议</option>
+            <option value="tcp">TCP</option>
+            <option value="udp">UDP</option>
+          </select>
+          <select class="select" id="historyDirection" aria-label="筛选方向">
+            <option value="all">全部方向</option>
+            <option value="upload">上传</option>
+            <option value="download">下载</option>
+            <option value="bidirectional">双向</option>
+          </select>
+          <button class="secondary-button" id="refreshHistory" type="button">刷新</button>
+        </div>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div><h2 class="panel-title">测试记录</h2><div class="panel-kicker" id="historyCount">0 条</div></div>
+          <div class="detail-actions">
+            <button class="secondary-button" id="exportHistory" type="button" disabled>导出 CSV</button>
+            <button class="danger-button" id="deleteHistory" type="button" disabled>删除选中</button>
+            <button class="danger-button" id="clearHistory" type="button">清空全部</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="selectAllHistory" aria-label="全选"></th>
+                <th>时间</th><th>目标</th><th>协议</th><th>方向</th>
+                <th class="numeric">上传</th><th class="numeric">下载</th><th class="numeric">时长</th><th>状态</th>
+              </tr>
+            </thead>
+            <tbody id="historyRows"><tr class="empty-row"><td colspan="9">暂无历史记录</td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <button class="quiet-button" id="prevHistory" type="button">上一页</button>
+          <span id="historyPageLabel">第 1 页</span>
+          <button class="quiet-button" id="nextHistory" type="button">下一页</button>
+        </div>
+      </section>
+
+      <section class="panel history-detail" id="historyDetail" hidden>
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title" id="historyDetailTitle">历史详情</h2>
+            <div class="panel-kicker" id="historyDetailKicker"></div>
+          </div>
+          <div class="detail-actions">
+            <span class="state-pill" id="historyDetailState"><span class="status-dot"></span><span>—</span></span>
+            <button class="secondary-button" id="historyExportJSON" type="button">导出 JSON</button>
+            <button class="secondary-button" id="historyExportCSV" type="button">导出 CSV</button>
+            <button class="quiet-button" id="closeHistoryDetail" type="button">关闭</button>
+          </div>
+        </div>
+        <div class="error-box" id="historyErrorBox" hidden></div>
+        <div class="metrics" id="historyMetrics"></div>
+        <div class="detail-section">
+          <div class="section-title-row">
+            <h3 class="section-title">区间明细</h3>
+            <div class="detail-actions">
+              <span class="panel-kicker" id="historyIntervalNote">—</span>
+              <button class="quiet-button" id="historyPrevPage" type="button">上一页</button>
+              <span class="panel-kicker" id="historyDetailPageLabel">第 1 页</span>
+              <button class="quiet-button" id="historyNextPage" type="button">下一页</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr id="historyIntervalHead"></tr></thead>
+              <tbody id="historyIntervalRows"><tr class="empty-row"><td>暂无区间数据</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <details class="raw-output detail-raw">
+          <summary id="historyRawSummary">iPerf3 原始输出</summary>
+          <pre id="historyRawOutput"></pre>
+        </details>
+      </section>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "iperf3-gui",
+  "outputfilename": "iperf3-gui",
+  "frontend:install": "",
+  "frontend:build": "",
+  "frontend:dev:watcher": "",
+  "frontend:dev:serverUrl": "",
+  "author": {
+    "name": "gzx19990101",
+    "email": "248835341+gzx19990101@users.noreply.github.com"
+  },
+  "info": {
+    "companyName": "iPerf3 GUI",
+    "productName": "iPerf3 网络测试台",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright 2026 gzx19990101",
+    "comments": "Go + Wails iPerf3 desktop client"
+  }
+}

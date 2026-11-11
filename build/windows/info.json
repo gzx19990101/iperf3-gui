@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "0.1.0.0"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "0.1.0",
+			"CompanyName": "iPerf3 GUI",
+			"FileDescription": "iPerf3 网络测试台",
+			"LegalCopyright": "Copyright 2026",
+			"ProductName": "iPerf3 网络测试台",
+			"Comments": "Go + Wails iPerf3 desktop client"
+		}
+	}
+}

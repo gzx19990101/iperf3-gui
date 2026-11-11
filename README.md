@@ -4,6 +4,10 @@ Go + Wails 的 Windows 桌面 iPerf3 测试台。前端沿用 `iperf3-gui-demo.h
 
 GitHub：https://github.com/gzx19990101/iperf3-gui
 
+## 下载
+
+预编译的 Windows x64 版本见 [Releases](https://github.com/gzx19990101/iperf3-gui/releases)。发布包包含 `iperf3-gui.exe`、许可证与第三方声明；运行需要 WebView2 Runtime，当前构建未做代码签名。
+
 ## 功能
 
 - 随包 iPerf3 3.22（Cygwin x64 构建），启动时探测版本与输出能力
